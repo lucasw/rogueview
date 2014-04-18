@@ -19,7 +19,7 @@
  */
 
 var grid;
-var SC = 8;
+var SC = 16;
 
 function init() {
   
@@ -29,14 +29,14 @@ function init() {
   grid = new Array(50);
   for (var i = 0; i < grid.length; i++) {
     grid[i] = new Array(30);
-    for (var j = 0; j < grid.length; j++) {
+    for (var j = 0; j < grid[i].length; j++) {
       var tile = new createjs.Shape();
-      if (Math.random() > 0.8) {
+      if (Math.random() > 0.1) {
         tile.graphics.beginFill("#aaaaaa");
       } else {
         tile.graphics.beginFill("#666666");
       }
-      tile.graphics.drawRect(0, 0, SC, SC);
+      tile.graphics.drawRect(0, 0, 1, 1);
       tile.x = i;
       tile.y = j;
       grid[i][j] = tile;
