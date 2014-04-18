@@ -18,7 +18,7 @@
  
  */
 
-var grid;
+var map;
 var SC = 16;
 
 var map_wd = 50;
@@ -88,9 +88,36 @@ function handleKey(e, val) {
   return false;
 }
 
+function Map() {
+  
+  var grid;
 
-function goodCoords(x, y) {
-if (
+  grid = new Array(map_wd);
+  for (var i = 0; i < grid.length; i++) {
+    grid[i] = new Array(map_ht);
+
+    for (var j = 0; j < grid[i].length; j++) {
+      
+      var obstruction = 0;
+      if (Math.random() < 0.03) 
+        obstruction = 1.0;
+      
+      grid[i][j] = new Tile(i, j, obstruction);
+      stage.addChild(grid[i][j].tile);
+    }
+  }
+
+  this.update = function(px, py) {
+    for (var i = 0; i < grid.length; i++) {
+      for (var j = 0; j < grid[i].length; j++) {
+        //console.log(i + " " + j + " : " + grid[i][j]); 
+        grid[i][j].update(px, py);     
+      }
+    }
+  }
+
+  this.goodCoords = function(x, y) {
+    if (
           (x >= grid.length) ||
           (x < 0)
           ) {
@@ -105,7 +132,13 @@ if (
         console.log("bad y " + x + " " + y + ", len " + grid[x].length);
         return false;
       }
-  return true;
+    return true;
+  }
+
+  this.getObstruction = function(x, y) {
+    if (!this.goodCoords(x, y)) return 1.0;
+    return grid[x][y].obstruction;
+  }
 }
 
 function update() {
@@ -118,11 +151,15 @@ function update() {
   if (key_up) dy -= dval;
   if (key_down) dy += dval;
 
-  if (goodCoords(px + dx, py + dy)) {
+  var test_x = px + dx;
+  var test_y = py + dy;
+  if (map.goodCoords(test_x, test_y)) {
     px += dx;
     py += dy;
+    //console.log("move " + px + " " + py + ", " + dx + " " + dy);
+  } else {
+    console.log("bad move " + test_x + " " + test_y);
   }
-  // TBD else
 
   if ((dx !== 0) || (dy !== 0))
   updateView();
@@ -161,12 +198,12 @@ function isInView(vx, vy, x, y) {
       var x = parseInt( vx + off_x );
       var y = parseInt( vy + Math.round(cy) );
       
-      if (!goodCoords(x,y)) return false;
-     
-      //console.log(x + " " + y + " " + grid[x][y]);
-      if (grid[x][y].obstruction > 0.1) return false; 
+      var obs = map.getObstruction(x,y);
+      //console.log(x + " " + y + " " + obs); 
+      if (obs > 0.1) return false; 
       cy += slope;
     }
+    //console.log(cx + " " + cy);
 
     return true;
   } else {
@@ -177,10 +214,7 @@ function isInView(vx, vy, x, y) {
       var x = parseInt( vx + Math.round(cx) );
       var y = parseInt( vy + off_y );
       
-      if (!goodCoords(x,y)) return false;
-     
-      //console.log(dx + " " + dy + ", " + x + " " + y + " " + grid[x][y]);
-      if (grid[x][y].obstruction > 0.1) return false; 
+      if (map.getObstruction(x,y) > 0.1) return false; 
       cx += slope;
     }
     return true;
@@ -234,20 +268,7 @@ function init() {
   px = Math.floor(Math.random() * map_wd);
   py = Math.floor(Math.random() * map_ht);
 
-  grid = new Array(map_wd);
-  for (var i = 0; i < grid.length; i++) {
-    grid[i] = new Array(map_ht);
-
-    for (var j = 0; j < grid[i].length; j++) {
-      
-      var obstruction = 0;
-      if (Math.random() < 0.03) 
-        obstruction = 1.0;
-      
-      grid[i][j] = new Tile(i, j, obstruction);
-      stage.addChild(grid[i][j].tile);
-    }
-  }
+  map = new Map();
 
   updateView();
   //createjs.Ticker.on("tick", update);
@@ -255,14 +276,9 @@ function init() {
 }
 
 function updateView() {
-  console.log("update view " + px + " " + py);
-  for (var i = 0; i < grid.length; i++) {
-    for (var j = 0; j < grid[i].length; j++) {
-      //console.log(i + " " + j + " : " + grid[i][j]); 
-      grid[i][j].update(px, py);     
-    }
-  }
- 
+  //console.log("update view " + px + " " + py);
+  map.update(px, py);
+
   stage.update();
 }
 
