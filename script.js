@@ -27,6 +27,68 @@ var map_ht = 30;
 var px;
 var py;
 
+
+var KEYCODE_UP = 38;
+var KEYCODE_DOWN = 40;
+var KEYCODE_LEFT = 37;
+var KEYCODE_RIGHT = 39;
+
+
+var key_left = false;
+var key_right = false;
+var key_up = false;
+var key_down = false;
+
+document.onkeydown = handleKeyDown;
+document.onkeyup = handleKeyUp;
+
+function handleKeyDown(e) {
+  if (!e) { var e = window.event; }
+  handleKey(e, true);
+}
+function handleKeyUp(e) {
+  if (!e) { var e = window.event; }
+  handleKey(e, false);
+}
+
+function handleKey(e, val) {
+  var do_update = true;
+
+  var key = e.keyCode; //String.fromCharCode( e.keyCode ).charCodeAt(0);
+  if (key == ' '.charCodeAt(0)) {
+    cat.action(val);
+  }
+  if (key == 'A'.charCodeAt(0))  key_left = val;
+  if (key == 'D'.charCodeAt(0))  key_right = val;
+  if (key == 'W'.charCodeAt(0))  key_up = val;
+  if (key == 'S'.charCodeAt(0))  key_down = val;
+  //console.log(key + " " + e.keyCode + " " + 'A'.charCodeAt(0));
+
+  switch (e.keyCode) {
+    case KEYCODE_LEFT:
+      key_left = val;
+      break;
+    case KEYCODE_RIGHT:
+      key_right = val;
+      break;
+    case KEYCODE_UP:
+      key_up = val;
+      break;
+    case KEYCODE_DOWN:
+      key_down = val;
+      break;
+    default:
+      do_update = false;
+      //return true;
+      break;
+  }
+
+  if (do_update)
+    update();
+  return false;
+}
+
+
 function goodCoords(x, y) {
 if (
           (x >= grid.length) ||
@@ -46,15 +108,45 @@ if (
   return true;
 }
 
-function isInView(vx, vy, x, y) {
+function update() {
+  var dx = 0;
+  var dy = 0;
 
+  var dval = 1;
+  if (key_left) dx -= dval;
+  if (key_right) dx += dval;
+  if (key_up) dy -= dval;
+  if (key_down) dy += dval;
+
+  if (goodCoords(px + dx, py + dy)) {
+    px += dx;
+    py += dy;
+  }
+  // TBD else
+
+  if ((dx !== 0) || (dy !== 0))
+  updateView();
+
+  return false;
+}
+
+// can vx, vy be seen from x,y
+function isInView(vx, vy, x, y) {
+  
+  var max_dist = 18;
   var dx = x - vx;
   var dy = y - vy;
+
+  if (Math.abs(dx) > max_dist) return false;
+  if (Math.abs(dy) > max_dist) return false;
+
   var dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist > 18)
+  if (dist > max_dist)
     return false;
   if (dist < 0.5)
     return true;
+
+  //return false;
 
   var cx = 0;
   var cy = 0;
@@ -72,7 +164,7 @@ function isInView(vx, vy, x, y) {
       if (!goodCoords(x,y)) return false;
      
       //console.log(x + " " + y + " " + grid[x][y]);
-      if (grid[x][y] > 0.1) return false; 
+      if (grid[x][y].obstruction > 0.1) return false; 
       cy += slope;
     }
 
@@ -88,13 +180,49 @@ function isInView(vx, vy, x, y) {
       if (!goodCoords(x,y)) return false;
      
       //console.log(dx + " " + dy + ", " + x + " " + y + " " + grid[x][y]);
-      if (grid[x][y] > 0.1) return false; 
+      if (grid[x][y].obstruction > 0.1) return false; 
       cx += slope;
     }
     return true;
   }
 
   return false;
+}
+
+function Tile(x, y, obstruction) {
+  
+  var x = x;
+  var y = y;
+  this.obstruction = obstruction;
+  
+  this.tile = new createjs.Shape();
+  this.tile.graphics.beginFill("#0f00ff");
+  this.tile.graphics.drawRect(0, 0, 1, 1);
+  this.tile.x = x;
+  this.tile.y = y;
+
+  this.is_in_view = false;
+
+  this.update = function(vx, vy) {
+
+    this.is_in_view = isInView(vx, vy, x, y);
+    //this.tile.graphics.clear();   
+    if (this.obstruction <= 0.1) {
+        if (this.is_in_view) 
+          this.tile.graphics.beginFill("#aaaaaa");
+        else 
+          this.tile.graphics.beginFill("#777777");
+    } else {
+        if (this.is_in_view) 
+          this.tile.graphics.beginFill("#886666");
+        else 
+          this.tile.graphics.beginFill("#654444");
+    }
+    this.tile.graphics.drawRect(0, 0, 1, 1);
+    this.tile.x = x;
+    this.tile.y = y;
+  }
+  return this;
 }
 
 function init() {
@@ -113,44 +241,28 @@ function init() {
     for (var j = 0; j < grid[i].length; j++) {
       
       var obstruction = 0;
-      if (Math.random() < 0.03)  obstruction = 1.0;
+      if (Math.random() < 0.03) 
+        obstruction = 1.0;
       
-      grid[i][j] = obstruction;
+      grid[i][j] = new Tile(i, j, obstruction);
+      stage.addChild(grid[i][j].tile);
     }
   }
 
+  updateView();
+  //createjs.Ticker.on("tick", update);
+  //createjs.Ticker.setFPS(10);
+}
+
+function updateView() {
+  console.log("update view " + px + " " + py);
   for (var i = 0; i < grid.length; i++) {
     for (var j = 0; j < grid[i].length; j++) {
-      var is_in_view = isInView(px, py, i, j);
       //console.log(i + " " + j + " : " + grid[i][j]); 
-      var tile = new createjs.Shape();
-      if (grid[i][j] <= 0.1) {
-        if (is_in_view) 
-          tile.graphics.beginFill("#aaaaaa");
-        else 
-          tile.graphics.beginFill("#777777");
-      } else {
-        if (is_in_view) 
-          tile.graphics.beginFill("#886666");
-        else 
-          tile.graphics.beginFill("#654444");
-      }
-      tile.graphics.drawRect(0, 0, 1, 1);
-      tile.x = i;
-      tile.y = j;
-      stage.addChild(tile);
+      grid[i][j].update(px, py);     
     }
   }
-  
-  { // character
-  var tile = new createjs.Shape();
-  tile.graphics.beginFill("#11cc22");
-  tile.graphics.drawRect(0, 0, 1, 1);
-  tile.x = px;
-  tile.y = py;
-  stage.addChild(tile);
-  }
-
+ 
   stage.update();
 }
 
