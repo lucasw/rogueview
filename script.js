@@ -27,13 +27,72 @@ var map_ht = 30;
 var px;
 var py;
 
+function goodCoords(x, y) {
+if (
+          (x >= grid.length) ||
+          (x < 0)
+          ) {
+        console.log("bad x " + x + ", len " + grid.length);
+        return false;
+      } 
+      
+      if (
+          (y >= grid[x].length) ||
+          (y < 0) 
+         ) {
+        console.log("bad y " + x + " " + y + ", len " + grid[x].length);
+        return false;
+      }
+  return true;
+}
+
 function isInView(vx, vy, x, y) {
 
-  if (
-      (Math.abs(vx - x) < 10) &&
-      (Math.abs(vy - y) < 10)
-      )
+  var dx = x - vx;
+  var dy = y - vy;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > 18)
+    return false;
+  if (dist < 0.5)
     return true;
+
+  var cx = 0;
+  var cy = 0;
+  if //((dx > 0) && 
+      ((Math.abs(dx) >= Math.abs(dy)) 
+      ) {
+    
+    var slope = dy / Math.abs(dx);
+    for (cx = 0; cx < Math.abs(dx); cx++) {
+      var off_x = cx;
+      if (dx < 0) off_x = -cx;
+      var x = parseInt( vx + off_x );
+      var y = parseInt( vy + Math.round(cy) );
+      
+      if (!goodCoords(x,y)) return false;
+     
+      //console.log(x + " " + y + " " + grid[x][y]);
+      if (grid[x][y] > 0.1) return false; 
+      cy += slope;
+    }
+
+    return true;
+  } else {
+    var slope = dx / Math.abs(dy);
+    for (cy = 0; cy < Math.abs(dy); cy++) {
+      var off_y = cy;
+      if (dy < 0) off_y = -cy;
+      var x = parseInt( vx + Math.round(cx) );
+      var y = parseInt( vy + off_y );
+      
+      if (!goodCoords(x,y)) return false;
+     
+      //console.log(dx + " " + dy + ", " + x + " " + y + " " + grid[x][y]);
+      if (grid[x][y] > 0.1) return false; 
+      cx += slope;
+    }
+    return true;
+  }
 
   return false;
 }
@@ -54,7 +113,7 @@ function init() {
     for (var j = 0; j < grid[i].length; j++) {
       
       var obstruction = 0;
-      if (Math.random() < 0.1)  obstruction = 1.0;
+      if (Math.random() < 0.03)  obstruction = 1.0;
       
       grid[i][j] = obstruction;
     }
@@ -72,9 +131,9 @@ function init() {
           tile.graphics.beginFill("#777777");
       } else {
         if (is_in_view) 
-          tile.graphics.beginFill("#666666");
+          tile.graphics.beginFill("#886666");
         else 
-          tile.graphics.beginFill("#444444");
+          tile.graphics.beginFill("#654444");
       }
       tile.graphics.drawRect(0, 0, 1, 1);
       tile.x = i;
